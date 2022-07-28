@@ -40,4 +40,5 @@ COPY ./src/productcatalogservice/products.json ./
 COPY --from=builder /go/bin/productcatalogservice/ ./
 
 EXPOSE ${PRODUCT_SERVICE_PORT}
+EXPOSE 2112
 ENTRYPOINT [ "./productcatalogservice" ]

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -30,6 +31,9 @@ import (
 	pb "github.com/opentelemetry/opentelemetry-demo/src/productcatalogservice/genproto/hipstershop"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
@@ -76,6 +80,30 @@ func init() {
 	if err != nil {
 		log.Warnf("could not parse product catalog")
 	}
+
+	//init runtime metrics
+	go func() {
+		// Create a new registry
+		reg := prometheus.NewRegistry()
+		addr := ":2112"
+
+		// Add Go module build info.
+		reg.MustRegister(collectors.NewBuildInfoCollector())
+		reg.MustRegister(collectors.NewGoCollector(
+			collectors.WithGoCollections(collectors.GoRuntimeMetricsCollection),
+		))
+
+		// Expose the registered metrics via HTTP.
+		http.Handle("/metrics", promhttp.HandlerFor(
+			reg,
+			promhttp.HandlerOpts{
+				// Opt into OpenMetrics to support exemplars.
+				EnableOpenMetrics: true,
+			},
+		))
+		fmt.Println("go runtime metrics expose on", addr)
+		log.Fatal(http.ListenAndServe(addr, nil))
+	}()
 }
 
 func InitTracerProvider() *sdktrace.TracerProvider {
