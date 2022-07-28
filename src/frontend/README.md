@@ -1,131 +1,34 @@
-# Frontend service
+This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
-The **frontend** service is responsible for rendering the UI for the store's website.
-It serves as the main entry point for the application routing requests to their
-appropriate backend services.
-The application uses Server Side Rendering (SSR) to generate HTML consumed by
-the clients, which could be web browsers, web crawlers, mobile clients or something
-else.
+## Getting Started
 
-## OpenTelemetry instrumentation
+First, run the development server:
 
-### Initialization
-
-The OpenTelemetry SDK is initialized in `main` using the `InitTraceProvider` function.
-
-```go
-func InitTracerProvider() *sdktrace.TracerProvider {
-    ctx := context.Background()
-
-    exporter, err := otlptracegrpc.New(ctx)
-    if err != nil {
-        log.Fatal(err)
-    }
-    tp := sdktrace.NewTracerProvider(
-        sdktrace.WithSampler(sdktrace.AlwaysSample()),
-        sdktrace.WithBatcher(exporter),
-    )
-    otel.SetTracerProvider(tp)
-    otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
-    return tp
-}
+```bash
+npm run dev
+# or
+yarn dev
 ```
 
-Services should call `TraceProvider.Shutdown()` when the service is shutdown to
-ensure all spans are exported.
-This service makes that call as part of a deferred function in `main`.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-```go
-    // Initialize OpenTelemetry Tracing
-    tp := InitTracerProvider()
-    defer func() {
-        if err := tp.Shutdown(context.Background()); err != nil {
-            log.Printf("Error shutting down tracer provider: %v", err)
-        }
-    }()
-```
+You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
 
-### HTTP instrumentation
+[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
 
-This service receives HTTP requests, controlled by the gorilla/mux Router.
-The following routes are defined by the frontend:
+The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
 
-| Path              | Method | Use                               |
-|-------------------|--------|-----------------------------------|
-| `/`               | GET    | Main index page                   |
-| `/cart`           | GET    | View Cart                         |
-| `/cart`           | POST   | Add to Cart                       |
-| `/cart/checkout`  | POST   | Place Order                       |
-| `/cart/empty`     | POST   | Empty Cart                        |
-| `/logout`         | GET    | Logout                            |
-| `/product/{id}`   | GET    | View Product                      |
-| `/setCurrency`    | POST   | Set Currency                      |
-| `/static/`        | *      | Static resources                  |
-| `/robots.txt`     | *      | Search engine response (disallow) |
-| `/_healthz`       | *      | Health check (ok)                 |
+## Learn More
 
-These requests are instrumented in the main function as part of the router's definition.
+To learn more about Next.js, take a look at the following resources:
 
-```go
-    // Add OpenTelemetry instrumentation to incoming HTTP requests controlled by the gorilla/mux Router.
-    r.Use(otelmux.Middleware("server"))
-```
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-### gRPC instrumentation
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
 
-This service will issue several outgoing gRPC calls, which have instrumentation
-hooks added in the `mustConnGRPC` function.
+## Deploy on Vercel
 
-```go
-func mustConnGRPC(ctx context.Context, conn **grpc.ClientConn, addr string) {
-    // Add OpenTelemetry instrumentation to outgoing gRPC requests
-    var err error
-    ctx, cancel := context.WithTimeout(ctx, time.Second*3)
-    defer cancel()
-    *conn, err = grpc.DialContext(ctx, addr,
-        grpc.WithTransportCredentials(insecure.NewCredentials()),
-        grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
-        grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()),
-    )
-    if err != nil {
-        panic(errors.Wrapf(err, "grpc: failed to connect %s", addr))
-    }
-}
-```
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-### Service specific instrumentation attributes
-
-All requests incoming to the frontend service will receive the following attributes:
-
-- `app.session.id`
-- `app.request.id`
-- `app.currency`
-- `app.user.id` (when the user is present)
-
-These attributes are added in the `instrumentHandler` function (defined in the
-middleware.go file) which wraps all HTTP routes specified within the
-gorilla/mux router.
-Additional attributes are added within each handler's function as appropriate
-(ie: `app.cart.size`, `app.cart.total.price`).
-
-Adding attributes to existing auto-instrumented spans can be accomplished by
-getting the current span from context, then adding attributes to it.
-
-```go
-    span := trace.SpanFromContext(r.Context())
-    span.SetAttributes(
-        attribute.Int(instr.AppPrefix+"cart.size", cartSize(cart)),
-        attribute.Int(instr.AppPrefix+"cart.items.count", len(items)),
-        attribute.Float64(instr.AppPrefix+"cart.shipping.cost", shippingCostFloat),
-        attribute.Float64(instr.AppPrefix+"cart.total.price", totalPriceFloat),
-    )
-```
-
-When an error is encountered, the current span's status code and error message
-are set.
-
-```go
-    // set span status on error
-    span := trace.SpanFromContext(r.Context())
-    span.SetStatus(codes.Error, errMsg)
-```
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
