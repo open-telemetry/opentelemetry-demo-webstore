@@ -53,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_logger()?;
     init_tracer()?;
     info!("OTel pipeline created");
-    let port = env::var("PORT").unwrap_or_else(|_| "50051".to_string());
+    let port = env::var("PORT").unwrap_or_else(|_| "50052".to_string());
     let addr = format!("0.0.0.0:{}", port).parse()?;
     info!("listening on {}", addr);
     let shipper = ShippingServer::default();

@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@grpc/grpc-js": "1.6.7",
-    "dotenv": "16.0.1"
+    "dotenv": "16.0.1",
+    "node-fetch": "2.6.7"
   }
 }

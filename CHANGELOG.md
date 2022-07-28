@@ -41,3 +41,5 @@ significant modifications will be credited to OpenTelemetry Authors.
 ([#189](https://github.com/open-telemetry/opentelemetry-demo/pull/189))
 * Simplified repo name and dropped the '-webstore' suffix in every place
 ([#225](https://github.com/open-telemetry/opentelemetry-demo/pull/225))
+* Added end-to-end tests to each individual service
+([#242](https://github.com/open-telemetry/opentelemetry-demo/pull/242))

@@ -24,5 +24,5 @@ WORKDIR /email_server
 
 COPY . .
 
-EXPOSE 8080
+EXPOSE ${EMAIL_SERVICE_PORT}
 ENTRYPOINT ["bundle", "exec", "ruby", "email_server.rb"]
